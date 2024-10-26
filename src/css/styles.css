@@ -49,6 +49,12 @@ body {
   width: 100%;
 }
 
+.gallery__link {
+  max-height: 250px;
+  overflow: hidden;
+  display: block;
+}
+
 .stats {
   display: flex;
   align-items: center;
@@ -73,4 +79,10 @@ body {
 
 .button > .spinner.is-hidden {
   display: none;
+}
+
+.bottomText {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 500;
 }

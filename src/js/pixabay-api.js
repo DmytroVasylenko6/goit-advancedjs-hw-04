@@ -12,7 +12,7 @@ export default class PicturesApiService {
 
   async fetchPictures() {
     const { data } = await axios.get(
-      `/?image_type=photo&orientation=horizontal&q=${this.searchQuery}&page=${this.page}&per_page=12&key=${API_KEY}`
+      `/?image_type=photo&orientation=horizontal&q=${this.searchQuery}&page=${this.page}&per_page=20&&safesearch=true&key=${API_KEY}`
     );
 
     if (data.total === 0) {
@@ -20,7 +20,7 @@ export default class PicturesApiService {
     }
     this.page += 1;
 
-    return data.hits;
+    return data;
   }
 
   resetPage() {

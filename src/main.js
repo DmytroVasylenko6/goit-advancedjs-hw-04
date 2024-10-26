@@ -1,8 +1,11 @@
 import LoadMoreBtn from './js/load-more-btn';
 import PicturesApiService from './js/pixabay-api';
 import { renderCard } from './js/render-functions';
+import errors from './js/errors';
+
 import iziToast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
+
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 
@@ -10,6 +13,7 @@ const refs = {
   searchForm: document.querySelector('.search-form'),
   gallery: document.querySelector('.gallery'),
   galleryItem: document.querySelector('.photo-card'),
+  bottomText: document.querySelector('#bottomText'),
 };
 
 const loadMoreBtn = new LoadMoreBtn({
@@ -29,27 +33,29 @@ function onImageClick(event) {
 
 const picturesApiService = new PicturesApiService();
 
-function onSearch(e) {
+async function onSearch(e) {
   e.preventDefault();
   clearPictureGallery();
   picturesApiService.query = e.currentTarget.elements.query.value.trim();
 
   if (picturesApiService.query === '') {
     loadMoreBtn.hide();
-    iziToast.show('Enter text!');
+    iziToast.show({
+      title: 'Error',
+      message: 'Please enter text!',
+      position: 'topCenter',
+      color: 'red',
+    });
+    return;
   }
 
   picturesApiService.resetPage();
-  fetchPictures();
-  loadMoreBtn.show();
+  await fetchPictures();
 }
 
-function onLoadMore() {
-  const startTime = performance.now();
-  fetchPictures();
-  const endTime = performance.now();
-  const time = Math.floor(endTime - startTime) * 1000;
-  scroll(time);
+async function onLoadMore() {
+  await fetchPictures();
+  scrollPage();
 }
 
 function appendPicturesMarkup(pictures) {
@@ -58,23 +64,41 @@ function appendPicturesMarkup(pictures) {
   });
   refs.gallery.insertAdjacentHTML('beforeend', html.join(''));
 
-  new SimpleLightbox('.gallery a', {
+  const lightbox = new SimpleLightbox('.gallery a', {
     caption: true,
     captionsData: 'alt',
     captionDelay: 250,
   });
+
+  lightbox.refresh();
 }
 
 function clearPictureGallery() {
   refs.gallery.innerHTML = '';
+  bottomText.classList.add('hidden');
 }
 
 async function fetchPictures() {
   loadMoreBtn.disable();
 
   try {
-    const pictures = await picturesApiService.fetchPictures();
-    appendPicturesMarkup(pictures);
+    const { hits, totalHits } = await picturesApiService.fetchPictures();
+
+    const displayedPicturesCount = refs.gallery.children.length;
+
+    if (displayedPicturesCount >= totalHits) {
+      loadMoreBtn.hide();
+      bottomText.classList.remove('hidden');
+      iziToast.show({
+        title: 'Info',
+        message: "We're sorry, but you've reached the end of search results.",
+        position: 'topCenter',
+        color: 'blue',
+      });
+      return;
+    }
+    appendPicturesMarkup(hits);
+    loadMoreBtn.show();
     loadMoreBtn.enable();
   } catch (er) {
     errors(er);
@@ -82,18 +106,14 @@ async function fetchPictures() {
   }
 }
 
-function scroll(time) {
-  let i = refs.gallery.clientHeight;
-  setTimeout(() => {
-    window.scrollTo({ top: i, behavior: 'smooth' });
-  }, time);
-}
+function scrollPage() {
+  const card = document.querySelector('.photo-card');
 
-function errors(er) {
-  if (er === 'Images not found') {
-    iziToast.show('Unfortunately nothing was found for this request');
-    return;
+  if (card) {
+    const cardHeight = card.getBoundingClientRect().height;
+    window.scrollBy({
+      top: cardHeight * 2,
+      behavior: 'smooth',
+    });
   }
-
-  iziToast.show('Error! Failed to upload images');
 }
